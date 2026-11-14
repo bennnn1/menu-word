@@ -1,0 +1,416 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Today’s Menu</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&display=swap" rel="stylesheet">
+<style>
+/* =========================================================
+   SETTINGS – the only part you should need to change
+   (the matching values are in the SETTINGS block in the script below)
+   ========================================================= */
+
+:root {
+  --meadow: #EEF3EA;      /* page background */
+  --paper: #FFFFFF;       /* meal panels */
+  --ink: #1F3326;         /* main text */
+  --ink-soft: #4A5E50;    /* secondary text */
+  --leaf: #3F6E45;        /* buttons */
+  --leaf-ink: #FFFFFF;
+  --honey: #F2D27A;       /* "Today" tag */
+  --line: #CBD8C6;
+  --down: #E8A99B;        /* selected thumbs-down */
+  color-scheme: light;
+  box-sizing: border-box;
+  padding-top: env(safe-area-inset-top, 0px);
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --meadow: #15201A; --paper: #1E2B23; --ink: #EDF3EA; --ink-soft: #B5C4B8;
+    --leaf: #7FB486; --leaf-ink: #10180F; --honey: #8A6A1C; --line: #34473A; --down: #8C4A3E;
+    color-scheme: dark;
+  }
+}
+*, *::before, *::after { box-sizing: inherit; }
+html, body { margin: 0; }
+body {
+  background: var(--meadow);
+  color: var(--ink);
+  font-family: "Atkinson Hyperlegible", Verdana, "Segoe UI", sans-serif;
+  font-size: 1.25rem;          /* large base size for easy reading */
+  line-height: 1.5;
+  -webkit-text-size-adjust: 100%;
+}
+.wrap { max-width: 40rem; margin: 0 auto; padding: 1.25rem 1.1rem 8.5rem; }
+
+/* ---------- Date header: the "calendar page" ---------- */
+.place { font-size: 1rem; color: var(--ink-soft); margin: 0 0 .75rem; }
+.date-head { margin: 0 0 1.5rem; }
+.tag {
+  display: inline-block; font-weight: 700; font-size: 1rem;
+  padding: .15rem .7rem; border-radius: 999px; margin-bottom: .4rem;
+  background: var(--line); color: var(--ink);
+}
+.tag.today { background: var(--honey); }
+.weekday { font-size: 3.1rem; line-height: 1.05; font-weight: 700; margin: 0; letter-spacing: -.01em; }
+.monthday { font-size: 1.6rem; margin: .2rem 0 0; color: var(--ink-soft); }
+
+.holiday img { width: 100%; max-width: 100%; border-radius: .75rem; display: block; margin-bottom: 1.25rem; }
+.notice { background: var(--paper); border-left: .35rem solid var(--honey); padding: .75rem 1rem; border-radius: .4rem; margin-bottom: 1.25rem; font-size: 1.1rem; }
+
+/* ---------- Meals ---------- */
+.meal { background: var(--paper); border: 1px solid var(--line); border-radius: 1rem; padding: 1.1rem 1.25rem 1.25rem; margin-bottom: 1rem; }
+.meal h2 { font-size: 1.85rem; margin: 0 0 .5rem; }
+.meal h3 { font-size: 1.05rem; color: var(--ink-soft); margin: 1rem 0 .2rem; font-weight: 700; }
+.meal ul { list-style: none; margin: 0; padding: 0; }
+.meal li { padding: .2rem 0; }
+.empty { color: var(--ink-soft); }
+
+/* ---------- Feedback ---------- */
+.fb { border-top: 1px solid var(--line); margin-top: 1rem; padding-top: .9rem; }
+.fb-open, .fb-send {
+  width: 100%; display: flex; align-items: center; justify-content: center;
+  min-height: 3.5rem; border-radius: .75rem; font-weight: 700; font-size: 1.15rem; text-decoration: none;
+}
+.fb-open { background: transparent; color: var(--ink); border: 2px solid var(--leaf); }
+.fb-open[aria-expanded="true"] { display: none; }
+.fb-panel[hidden] { display: none; }
+.fb-q { margin: 0 0 .5rem; font-weight: 700; }
+.fb-items { margin-bottom: 1.25rem !important; }
+.fb-items li { display: flex; align-items: center; justify-content: space-between; gap: .75rem; padding: .45rem 0; border-bottom: 1px solid var(--line); }
+.fb-items li:last-child { border-bottom: 0; }
+.fb-pair { display: flex; gap: .5rem; flex-shrink: 0; }
+.thumb {
+  width: 3.4rem; min-height: 3.4rem; font-size: 1.5rem; background: transparent;
+  border: 2px solid var(--line); border-radius: .75rem;
+}
+.thumb[aria-pressed="true"][data-v="up"] { background: var(--leaf); border-color: var(--leaf); }
+.thumb[aria-pressed="true"][data-v="down"] { background: var(--down); border-color: var(--down); }
+.svc { display: grid; grid-template-columns: 1fr 1fr; gap: .6rem; margin-bottom: 1.25rem; }
+.svc button { background: transparent; color: var(--ink); border: 2px solid var(--line); min-height: 3.4rem; font-size: 1.1rem; }
+.svc button[aria-pressed="true"] { background: var(--leaf); border-color: var(--leaf); color: var(--leaf-ink); }
+.fb-send { background: var(--leaf); color: var(--leaf-ink); }
+.fb-hint { font-size: 1rem; color: var(--ink-soft); margin: .5rem 0 0; text-align: center; }
+
+/* ---------- Bottom navigation ---------- */
+nav {
+  position: fixed; left: 0; right: 0; bottom: 0;
+  background: var(--meadow); border-top: 1px solid var(--line);
+  padding: .75rem 1rem calc(.75rem + env(safe-area-inset-bottom, 0px));
+}
+.nav-inner { max-width: 40rem; margin: 0 auto; display: flex; flex-direction: column; gap: .6rem; }
+.nav-row { display: flex; gap: .75rem; }
+button {
+  font: inherit; font-weight: 700; cursor: pointer;
+  border: 0; border-radius: .9rem; min-height: 3.75rem;
+}
+.step { flex: 1; background: var(--leaf); color: var(--leaf-ink); font-size: 1.2rem; }
+.step:disabled { opacity: .35; cursor: default; }
+.home { background: transparent; color: var(--ink); border: 2px solid var(--leaf); min-height: 3rem; font-size: 1.05rem; }
+.home[hidden] { display: none; }
+button:focus-visible, a:focus-visible { outline: 3px solid var(--honey); outline-offset: 3px; }
+
+.status { text-align: center; padding: 3rem 1rem; color: var(--ink-soft); }
+.status button { background: var(--leaf); color: var(--leaf-ink); padding: 0 1.5rem; margin-top: 1rem; }
+
+@media (max-width: 360px) { .weekday { font-size: 2.5rem; } body { font-size: 1.15rem; } }
+@media (prefers-reduced-motion: no-preference) {
+  main.turn { animation: turn .25s ease-out; }
+  @keyframes turn { from { opacity: .3; } to { opacity: 1; } }
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <p class="place" id="place">Dining</p>
+  <main id="main" aria-live="polite"><div class="status">Loading the menu…</div></main>
+</div>
+
+<nav aria-label="Change day">
+  <div class="nav-inner">
+    <div class="nav-row">
+      <button class="step" id="prev">‹ Previous day</button>
+      <button class="step" id="next">Next day ›</button>
+    </div>
+    <button class="home" id="home" hidden>Back to today</button>
+  </div>
+</nav>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+<script src="menu-word.js"></script>
+<script>
+/* =========================================================
+   SETTINGS – change these if anything about your menu changes
+   ========================================================= */
+const SETTINGS = {
+  wordFile: "menu.docx",        // the Word menu the dining director fills in
+  // The two below are backups. The Word file's "Date Week 1 began" box
+  // and its number of weeks are used instead when they're filled in.
+  cycleWeeks: 4,
+  week1Starts: "2026-10-18",
+  daysBack: 7,                  // how far back residents can look (for feedback)
+  daysAhead: 14,                // how far ahead residents can look
+  mayChangeAfter: 7,            // show "may change" note beyond this many days ahead
+
+  // Paste your Microsoft Forms pre-filled link here (see instructions).
+  // It must contain DATEHERE, MEALHERE, LIKEDHERE, DISLIKEDHERE and SERVICEHERE.
+  // Leave it as "" to hide the feedback section.
+  feedbackLink: "",
+  // These must match the Service question's choices in your form exactly.
+  serviceChoices: ["Excellent", "Good", "Fair", "Poor"],
+};
+/* ========================================================= */
+
+const MEALS = ["Breakfast", "Lunch", "Dinner"];
+const SECTIONS = [["item", ""], ["appetizer", "Appetizer"], ["entree", "Entrée"], ["sides", "Sides"], ["dessert", "Dessert"]];
+const DAY_NAMES = ["sunday","monday","tuesday","wednesday","thursday","friday","saturday"];
+
+let menu = null;   // menu[week][dayOfWeek] = { gif, meals: { Lunch: { entree: [...] } } }
+let offset = 0;    // 0 = today, -1 = yesterday, 1 = tomorrow
+
+/* ---------- CSV reading (handles quotes and line breaks inside cells) ---------- */
+function parseCSV(text) {
+  const rows = []; let row = [], field = "", quoted = false;
+  text = text.replace(/^\uFEFF/, "");
+  for (let i = 0; i < text.length; i++) {
+    const c = text[i];
+    if (quoted) {
+      if (c === '"' && text[i + 1] === '"') { field += '"'; i++; }
+      else if (c === '"') quoted = false;
+      else field += c;
+    } else if (c === '"') quoted = true;
+    else if (c === ",") { row.push(field); field = ""; }
+    else if (c === "\n" || c === "\r") {
+      if (c === "\r" && text[i + 1] === "\n") i++;
+      row.push(field); rows.push(row); row = []; field = "";
+    } else field += c;
+  }
+  if (field !== "" || row.length) { row.push(field); rows.push(row); }
+  return rows.filter(r => r.some(v => v.trim() !== ""));
+}
+const clean = s => (s || "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]/g, "");
+const splitItems = s => (s || "").split(/\r?\n|;|\|/).map(x => x.trim()).filter(x => x && !/^\d+$/.test(x));
+
+function mealName(s) {
+  const m = clean(s);
+  if (m.startsWith("break") || m.startsWith("bfast")) return "Breakfast";
+  if (m.startsWith("lun")) return "Lunch";
+  if (m.startsWith("din") || m.startsWith("sup")) return "Dinner";
+  return null;
+}
+function dayIndex(s) {
+  const d = clean(s);
+  const byName = DAY_NAMES.findIndex(n => d.includes(n) || (d.length >= 3 && n.startsWith(d.replace(/\d/g, "")) && /[a-z]/.test(d)));
+  if (byName >= 0) return byName;
+  const n = parseInt(String(s).replace(/\D/g, ""), 10);
+  return n >= 1 && n <= 7 ? n - 1 : -1;   // 1 = Sunday
+}
+
+function buildMenu(rows) {
+  const head = rows[0].map(clean);
+  const col = name => head.findIndex(h => h === name || h.startsWith(name));
+  const idx = {
+    week: col("week"), day: col("day"), meal: col("meal"), item: col("item"),
+    appetizer: col("appetizer"), entree: col("entree"), sides: col("side"),
+    dessert: col("dessert"), gif: col("holidaygif")
+  };
+  if (idx.week < 0 || idx.day < 0 || idx.meal < 0) throw new Error("columns");
+  const out = {};
+  for (const r of rows.slice(1)) {
+    const week = parseInt(String(r[idx.week]).replace(/\D/g, ""), 10);
+    const dow = dayIndex(r[idx.day]);
+    const meal = mealName(r[idx.meal]);
+    if (!week || dow < 0) continue;
+    out[week] ??= {};
+    const day = out[week][dow] ??= { gif: "", meals: {} };
+    if (idx.gif >= 0 && (r[idx.gif] || "").trim()) day.gif = r[idx.gif].trim();
+    if (!meal) continue;
+    const m = day.meals[meal] ??= {};
+    for (const [key] of SECTIONS) {
+      if (idx[key] < 0) continue;
+      for (const it of splitItems(r[idx[key]])) {
+        m[key] ??= [];
+        if (!m[key].includes(it)) m[key].push(it);
+      }
+    }
+  }
+  return out;
+}
+
+/* ---------- Dates ---------- */
+function dateFor(off) { const d = new Date(); d.setHours(12, 0, 0, 0); d.setDate(d.getDate() + off); return d; }
+function cycleWeek(d) {
+  const [y, m, day] = SETTINGS.week1Starts.split("-").map(Number);
+  const start = Date.UTC(y, m - 1, day);
+  const now = Date.UTC(d.getFullYear(), d.getMonth(), d.getDate());
+  const weeks = Math.floor((now - start) / 86400000 / 7);
+  return ((weeks % SETTINGS.cycleWeeks) + SETTINGS.cycleWeeks) % SETTINGS.cycleWeeks + 1;
+}
+function label(off) {
+  if (off === 0) return ["Today", "today"];
+  if (off === 1) return ["Tomorrow", ""];
+  if (off === -1) return ["Yesterday", ""];
+  return [off > 0 ? `In ${off} days` : `${-off} days ago`, ""];
+}
+
+/* ---------- Drawing the page ---------- */
+const esc = s => String(s).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+
+function mealItems(m) {
+  const all = [];
+  for (const [key] of SECTIONS) for (const it of (m[key] || [])) if (!all.includes(it)) all.push(it);
+  return all;
+}
+
+function feedbackHTML(meal, m) {
+  if (!SETTINGS.feedbackLink || offset > 0) return "";
+  const items = mealItems(m);
+  const when = offset === 0 ? "" : " that day";
+  const rows = items.map(it => `<li><span>${esc(it)}</span><div class="fb-pair">
+      <button class="thumb" data-item="${esc(it)}" data-v="up" aria-pressed="false" aria-label="Liked ${esc(it)}">👍</button>
+      <button class="thumb" data-item="${esc(it)}" data-v="down" aria-pressed="false" aria-label="Didn’t like ${esc(it)}">👎</button>
+    </div></li>`).join("");
+  const svc = SETTINGS.serviceChoices.map(c => `<button data-svc="${esc(c)}" aria-pressed="false">${esc(c)}</button>`).join("");
+  return `<div class="fb" data-meal="${meal}">
+    <button class="fb-open" aria-expanded="false">Rate ${meal.toLowerCase()}${when}</button>
+    <div class="fb-panel" hidden>
+      ${items.length ? `<p class="fb-q">Tap 👍 or 👎 for anything you tried.</p><ul class="fb-items">${rows}</ul>` : ""}
+      <p class="fb-q">How was the service?</p>
+      <div class="svc">${svc}</div>
+      <a class="fb-send" href="#" target="_blank" rel="noopener">Add a comment and send</a>
+      <p class="fb-hint">Your answers will be filled in. Tap Submit on the next page.</p>
+    </div>
+  </div>`;
+}
+
+// Build the form link from what the resident has tapped
+function fillLink(box) {
+  const d = dateFor(offset);
+  const pick = v => [...box.querySelectorAll(`.thumb[data-v="${v}"][aria-pressed="true"]`)].map(b => b.dataset.item).join("; ");
+  const svcBtn = box.querySelector('.svc [aria-pressed="true"]');
+  const values = {
+    DATEHERE: d.toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric", year: "numeric" }),
+    MEALHERE: box.dataset.meal,
+    LIKEDHERE: pick("up"),
+    DISLIKEDHERE: pick("down"),
+    SERVICEHERE: svcBtn ? svcBtn.dataset.svc : "",
+  };
+  let url = SETTINGS.feedbackLink;
+  for (const [ph, val] of Object.entries(values)) {
+    if (val) url = url.replace(ph, encodeURIComponent(val));
+    else url = url.replace(new RegExp(`&[^&=]+=(%22)?${ph}(%22)?`), "");   // leave unanswered questions blank
+  }
+  box.querySelector(".fb-send").href = url;
+}
+
+document.addEventListener("click", e => {
+  const box = e.target.closest(".fb");
+  if (!box) return;
+  const open = e.target.closest(".fb-open");
+  const thumb = e.target.closest(".thumb");
+  const svc = e.target.closest("[data-svc]");
+  if (open) {
+    open.setAttribute("aria-expanded", "true");
+    box.querySelector(".fb-panel").hidden = false;
+  } else if (thumb) {
+    const on = thumb.getAttribute("aria-pressed") !== "true";
+    thumb.parentElement.querySelectorAll(".thumb").forEach(b => b.setAttribute("aria-pressed", "false"));
+    thumb.setAttribute("aria-pressed", String(on));
+  } else if (svc) {
+    box.querySelectorAll("[data-svc]").forEach(b => b.setAttribute("aria-pressed", String(b === svc)));
+  }
+  fillLink(box);
+});
+
+function mealHTML(name, m) {
+  let body = "";
+  if (m) {
+    for (const [key, heading] of SECTIONS) {
+      if (!m[key] || !m[key].length) continue;
+      if (heading) body += `<h3>${heading}</h3>`;
+      body += `<ul>${m[key].map(i => `<li>${esc(i)}</li>`).join("")}</ul>`;
+    }
+  }
+  if (!body) body = `<p class="empty">Not posted yet.</p>`;
+  return `<section class="meal" aria-label="${name}"><h2>${name}</h2>${body}${m ? feedbackHTML(name, m) : ""}</section>`;
+}
+
+function render() {
+  const d = dateFor(offset);
+  const day = menu?.[cycleWeek(d)]?.[d.getDay()];
+  const [tagText, tagClass] = label(offset);
+  let html = `<header class="date-head">
+      <span class="tag ${tagClass}">${tagText}</span>
+      <h1 class="weekday">${d.toLocaleDateString("en-US", { weekday: "long" })}</h1>
+      <p class="monthday">${d.toLocaleDateString("en-US", { month: "long", day: "numeric" })}</p>
+    </header>`;
+  if (day?.gif) html += `<div class="holiday"><img src="${esc(day.gif)}" alt="Holiday celebration"></div>`;
+  if (offset > SETTINGS.mayChangeAfter) html += `<p class="notice">This menu is still being planned and may change.</p>`;
+  html += day ? MEALS.map(n => mealHTML(n, day.meals[n])).join("")
+              : `<p class="notice">The menu for this day hasn’t been posted yet.</p>`;
+
+  const main = document.getElementById("main");
+  main.innerHTML = html;
+  main.classList.remove("turn"); void main.offsetWidth; main.classList.add("turn");
+  document.getElementById("prev").disabled = offset <= -SETTINGS.daysBack;
+  document.getElementById("next").disabled = offset >= SETTINGS.daysAhead;
+  document.getElementById("home").hidden = offset === 0;
+  window.scrollTo(0, 0);
+}
+
+function go(step) {
+  const n = offset + step;
+  if (n < -SETTINGS.daysBack || n > SETTINGS.daysAhead) return;
+  offset = n; render();
+}
+
+async function load() {
+  const main = document.getElementById("main");
+  try {
+    const word = await MenuFromWord.load(`${SETTINGS.wordFile}?v=${Date.now()}`);
+    if (word.week1Starts) SETTINGS.week1Starts = word.week1Starts;
+    if (word.cycleWeeks) SETTINGS.cycleWeeks = word.cycleWeeks;
+    if (word.community) {
+      document.getElementById("place").textContent = `${word.community} · Dining`;
+      document.title = `Today’s Menu – ${word.community}`;
+    }
+    menu = buildMenu(parseCSV(word.csv));
+    render();
+  } catch (e) {
+    main.innerHTML = `<div class="status">
+      <p>The menu didn’t load. Check that the device is connected to the internet.</p>
+      <button onclick="load()">Try again</button></div>`;
+  }
+}
+
+document.getElementById("prev").onclick = () => go(-1);
+document.getElementById("next").onclick = () => go(1);
+document.getElementById("home").onclick = () => { offset = 0; render(); };
+document.addEventListener("keydown", e => { if (e.key === "ArrowLeft") go(-1); if (e.key === "ArrowRight") go(1); });
+
+// Swipe left/right to change days
+let sx = null, sy = null;
+document.addEventListener("touchstart", e => { sx = e.touches[0].clientX; sy = e.touches[0].clientY; }, { passive: true });
+document.addEventListener("touchend", e => {
+  if (sx === null) return;
+  const dx = e.changedTouches[0].clientX - sx, dy = e.changedTouches[0].clientY - sy;
+  if (Math.abs(dx) > 70 && Math.abs(dx) > Math.abs(dy) * 1.5) go(dx < 0 ? 1 : -1);
+  sx = null;
+}, { passive: true });
+
+// If the page is left open overnight, jump to the new "today" when it's reopened
+let lastDay = new Date().toDateString();
+document.addEventListener("visibilitychange", () => {
+  if (document.visibilityState === "visible" && new Date().toDateString() !== lastDay) {
+    lastDay = new Date().toDateString(); offset = 0; load();
+  }
+});
+
+load();
+</script>
+</body>
+</html>
