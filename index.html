@@ -1,0 +1,713 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Campus Dining Menu</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    html, body {
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      font-family: 'Segoe UI', Arial, sans-serif;
+      background-color: #1a1a1a;
+      color: #111111;
+    }
+
+    .screen-container {
+      width: 100%;
+      height: 100%;
+      padding: 0.5rem 1rem;
+      background: #f4f4f9 url('background.jpg') no-repeat center center;
+      -webkit-background-size: cover;
+      background-size: cover;
+      position: relative;
+    }
+
+    /* TOP HEADER */
+    .header-bar {
+      display: -webkit-flex;
+      display: flex;
+      margin-bottom: 0.3rem;
+    }
+    .meta-box {
+      -webkit-flex: 1;
+      flex: 1;
+      margin-right: 1rem;
+      background: rgba(255, 255, 255, 0.95);
+      border: 3px solid #2c3e50;
+      border-radius: 8px;
+      padding: 0.3rem 0.8rem;
+      text-align: center;
+      box-shadow: 0 4px 6px rgba(0,0,0,0.15);
+    }
+    .meta-box.date-range { font-size: 1.2rem; font-weight: 700; color: #2c3e50; }
+    .meta-box.week-info  { -webkit-flex: 1.5; flex: 1.5; font-size: 1.4rem; font-weight: 800; color: #b71c1c; }
+    .meta-box.cycle-info { margin-right: 0; font-size: 1.2rem; font-weight: 700; color: #2c3e50; }
+
+    /* MENU TABLE (the script sets its font size so everything fits the screen) */
+    .menu-table {
+      width: 100%;
+      border-collapse: separate;
+      border-spacing: 4px;
+      table-layout: fixed;
+      font-size: 20px;
+    }
+
+    .menu-table th, .menu-table td {
+      background: rgba(255, 255, 255, 0.96);
+      border: 2px solid #cccccc;
+      border-radius: 6px;
+      padding: 0.3em 0.4em;
+    }
+
+    .day-header {
+      text-align: center;
+      vertical-align: middle;
+      font-weight: 800;
+      font-size: 1.05em;
+      background: #2c3e50 !important;
+      color: #ffffff;
+      padding: 0.25em 0.4em !important;
+    }
+
+    .meal-header {
+      width: 2.2em;
+      text-align: center;
+      vertical-align: middle;
+      background: #34495e !important;
+      color: #ffffff;
+      font-weight: 800;
+      font-size: 0.6em;
+      letter-spacing: 0.08em;
+      -webkit-writing-mode: vertical-rl;
+      writing-mode: vertical-rl;
+      -webkit-transform: rotate(180deg);
+      transform: rotate(180deg);
+      white-space: nowrap;
+      padding: 0.3em 0 !important;
+    }
+
+    .meal-cell {
+      font-family: 'Segoe UI Semilight', 'Segoe UI', Arial, sans-serif;
+      font-weight: 400;
+      line-height: 1.2;
+      color: #111111;
+      text-align: center;
+      vertical-align: middle;
+      overflow: hidden;
+    }
+    .meal-cell .item { padding: 0.05em 0; }
+
+    .section-label {
+      font-weight: 700;
+      text-decoration: underline;
+      color: #111111;
+      margin-top: 0.55em;
+      line-height: 1.2;
+    }
+    .meal-cell .section-label:first-child { margin-top: 0; }
+    .section-gap { height: 0.9em; }
+
+    .heart-symbol { color: #e74c3c; font-weight: bold; }
+
+    /* On a holiday the picture replaces the breakfast items and fills the whole cell.
+       (Change "contain" to "cover" to fill edge to edge, trimming the picture if its shape differs.) */
+    .menu-table td.holiday-cell { position: relative; padding: 0 !important; }
+    .holiday-gif {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+    }
+
+    .is-today {
+      border: 4px solid #f39c12 !important;
+      box-shadow: 0 0 14px rgba(243, 156, 18, 0.7);
+      background: #fffdf2 !important;
+    }
+    th.is-today { background: #f39c12 !important; color: #ffffff; }
+
+    .notes-cell {
+      font-size: 0.6em;
+      line-height: 1.2;
+      background: rgba(236, 240, 241, 0.98) !important;
+      color: #222222;
+      font-weight: 500;
+      text-align: center;
+      vertical-align: middle;
+    }
+    .spacer-cell { background: transparent !important; border: none !important; }
+
+    #progress-container {
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      width: 100%;
+      height: 6px;
+      background: rgba(0, 0, 0, 0.3);
+    }
+    #progress-bar { height: 100%; width: 100%; background: #e74c3c; }
+
+    #note-screen {
+      position: fixed;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: #000;
+      display: none;
+      z-index: 100;
+    }
+    #note-screen img { width: 100%; height: 100%; object-fit: contain; }
+
+    /* Only appears if something goes wrong loading the menu */
+    #status {
+      display: none;
+      position: fixed;
+      left: 12px; right: 12px; bottom: 14px;
+      z-index: 200;
+      padding: 6px 10px;
+      background: #fff3cd;
+      border: 2px solid #b71c1c;
+      border-radius: 6px;
+      color: #7a0000;
+      font-size: 16px;
+      font-weight: 700;
+      text-align: center;
+    }
+  </style>
+</head>
+<body>
+
+<div class="screen-container" id="screen">
+  <div class="header-bar" id="header-bar">
+    <div class="meta-box date-range" id="date-display"></div>
+    <div class="meta-box week-info" id="week-display">Loading...</div>
+    <div class="meta-box cycle-info" id="cycle-display">Fall / Winter Menu</div>
+  </div>
+
+  <table class="menu-table" id="menu-table">
+    <thead id="menu-head"></thead>
+    <tbody id="menu-body"></tbody>
+  </table>
+
+  <div id="progress-container"><div id="progress-bar"></div></div>
+</div>
+
+<div id="note-screen"><img id="note-img" src="note.png" alt=""></div>
+<div id="status"></div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+<script src="menu-word.js"></script>
+<script>
+// This script is written in older-style JavaScript on purpose, so it also works
+// in the older web browsers built into some TVs and signage monitors.
+(function () {
+  'use strict';
+
+  // ---------------- SETTINGS ----------------
+  var MENU_SECONDS = 45;   // current week on screen
+  var NEXT_SECONDS = 15;   // following week on screen
+  var NOTE_SECONDS = 15;   // note.png on screen
+  var MENU_FILE = 'menu.docx';     // the Word menu the dining director fills in
+  // The two below are backups. The Word file's "Date Week 1 began" box and
+  // its number of weeks are used instead whenever they're filled in.
+  var CYCLE_ANCHOR = '2026-10-18'; // a Sunday that starts a Week 1
+  var CYCLE_LENGTH = 4;    // number of weeks in the rotation
+
+  // Largest the menu text is allowed to be, as a % of screen height
+  // (1.5 is about 16px on a 1080p monitor). It shrinks further if a week doesn't fit.
+  var MAX_FONT_VH = 1.5;
+
+  var ALWAYS_BREAKFAST = [];            // e.g. ['Assorted Bread & Fruit']
+  var TOSSED_SALAD = 'Tossed Salad';    // added under the soup when a day has no appetizer
+  var DESSERT_HEADING = '';             // '' = no heading, just a gap
+  var DESSERT_WITH_LUNCH_DAYS = ['Sun'];// days whose dessert shows with Lunch instead of Dinner
+  // Items that contain commas themselves (so the page doesn't split them in two
+  // when a cell lists several items separated by commas)
+  var PROTECTED_COMMA_ITEMS = [
+    'Grilled Ham, Pineapple, Swiss Sandwich',
+    'Turkey, Provolone, Bacon Sandwich',
+    'Chicken, Bacon, Ranch Pizza'
+  ];
+  var RELOAD_AFTER_HOURS = 6;           // page reloads itself now and then to pick up updates
+
+  var DAYS = [
+    ['Sun', 'Sunday'], ['Mon', 'Monday'], ['Tue', 'Tuesday'], ['Wed', 'Wednesday'],
+    ['Thu', 'Thursday'], ['Fri', 'Friday'], ['Sat', 'Saturday']
+  ];
+  var MEALS = ['Breakfast', 'Lunch', 'Dinner'];
+  var MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+
+  var pageStart = new Date().getTime();
+
+  function byId(id) { return document.getElementById(id); }
+
+  function setStatus(msg) {
+    var el = byId('status');
+    if (!msg) { el.style.display = 'none'; return; }
+    el.textContent = msg;
+    el.style.display = 'block';
+  }
+
+  window.onerror = function (msg, src, line) {
+    setStatus('Script error: ' + msg + ' (line ' + line + ')');
+  };
+
+  // ---------------- BUILD THE TABLE ONCE ----------------
+  function buildTable() {
+    var head = '<tr><th class="spacer-cell" style="width:2.2em"></th>';
+    DAYS.forEach(function (d) { head += '<th class="day-header" id="col-' + d[0] + '">' + d[1] + '</th>'; });
+    head += '</tr>';
+    byId('menu-head').innerHTML = head;
+
+    var body = '';
+    MEALS.forEach(function (meal) {
+      body += '<tr><td class="meal-header">' + meal.toUpperCase() + '</td>';
+      DAYS.forEach(function (d) { body += '<td class="meal-cell" id="cell-' + d[0] + '-' + meal + '"></td>'; });
+      body += '</tr>';
+    });
+    body += '<tr>' +
+      '<td class="spacer-cell"></td>' +
+      '<td colspan="3" class="notes-cell">Tossed Side Salad, Mashed Potato or Mashed Sweet Potato (Check Menu Jacket for Availability), Potato Chips, Pretzels, and Carrot Sticks are always available to accompany any lunch entr&eacute;e.</td>' +
+      '<td colspan="2" class="notes-cell"><span class="heart-symbol" style="margin:0 .2em 0 0">&hearts;</span> Heart-healthy choices help to reduce the amount of sodium in your diet</td>' +
+      '<td colspan="2" class="notes-cell">We hope you enjoy all your meals with us. For any questions about the menu or your meals please see any member of dining services.</td>' +
+      '</tr>';
+    byId('menu-body').innerHTML = body;
+  }
+
+  // ---------------- WEEK CALCULATION ----------------
+  function startOfDay(d) { return new Date(d.getFullYear(), d.getMonth(), d.getDate()); }
+
+  function getCurrentWeek() {
+    var p = CYCLE_ANCHOR.split('-');
+    var anchor = new Date(parseInt(p[0], 10), parseInt(p[1], 10) - 1, parseInt(p[2], 10));
+    var today = startOfDay(new Date());
+    var diffDays = Math.round((today.getTime() - anchor.getTime()) / 86400000);
+    var diffWeeks = Math.floor(diffDays / 7);
+    return (((diffWeeks % CYCLE_LENGTH) + CYCLE_LENGTH) % CYCLE_LENGTH) + 1;
+  }
+
+  function showDateRange(weekOffset) {
+    var today = startOfDay(new Date());
+    var sunday = new Date(today.getFullYear(), today.getMonth(), today.getDate() - today.getDay() + weekOffset * 7);
+    var saturday = new Date(sunday.getFullYear(), sunday.getMonth(), sunday.getDate() + 6);
+    function fmt(d) { return MONTHS[d.getMonth()] + ' ' + d.getDate(); }
+    byId('date-display').textContent = fmt(sunday) + ' \u2013 ' + fmt(saturday);
+  }
+
+  // ---------------- CSV PARSER ----------------
+  // Handles quoted cells (commas, line breaks, doubled quotes), the invisible
+  // BOM Excel adds, and files that use ; or tabs instead of commas.
+  function parseCSV(text) {
+    text = text.replace(/^\uFEFF/, '');
+    var firstLine = text.split(/\r?\n/)[0] || '';
+    var commas = firstLine.split(',').length;
+    var semis = firstLine.split(';').length;
+    var tabs = firstLine.split('\t').length;
+    var delim = ',';
+    if (semis > commas && semis >= tabs) delim = ';';
+    else if (tabs > commas) delim = '\t';
+
+    var rows = [], row = [], field = '', inQuotes = false, i, c;
+    for (i = 0; i < text.length; i++) {
+      c = text.charAt(i);
+      if (inQuotes) {
+        if (c === '"') {
+          if (text.charAt(i + 1) === '"') { field += '"'; i++; }
+          else inQuotes = false;
+        } else {
+          field += c;
+        }
+      } else if (c === '"') {
+        inQuotes = true;
+      } else if (c === delim) {
+        row.push(field); field = '';
+      } else if (c === '\n' || c === '\r') {
+        if (c === '\r' && text.charAt(i + 1) === '\n') i++;
+        row.push(field); field = '';
+        if (rowHasText(row)) rows.push(row);
+        row = [];
+      } else {
+        field += c;
+      }
+    }
+    row.push(field);
+    if (rowHasText(row)) rows.push(row);
+    return rows;
+  }
+
+  function rowHasText(row) {
+    for (var i = 0; i < row.length; i++) { if (row[i].replace(/\s+/g, '') !== '') return true; }
+    return false;
+  }
+
+  // "LunEntr\u00e9e1", "Lun Entree 1" and "lunentree1" all become "lunentree1"
+  function normLabel(s) {
+    s = String(s || '').toLowerCase();
+    try { s = s.normalize('NFD').replace(/[\u0300-\u036f]/g, ''); } catch (e) {}
+    s = s.replace(/[\u00e0-\u00e5]/g, 'a').replace(/[\u00e8-\u00eb]/g, 'e');
+    return s.replace(/[^a-z0-9]/g, '');
+  }
+
+  var WEEK_RE = /week\s*(\d+)\s*[-:]?\s*([a-z]+)/i;
+
+  function dayKeyFor(name) {
+    var three = name.slice(0, 3).toLowerCase();
+    for (var i = 0; i < DAYS.length; i++) { if (DAYS[i][0].toLowerCase() === three) return DAYS[i][0]; }
+    return null;
+  }
+
+  // Reads menu.csv in either layout and returns { layout, weeks }:
+  //  - "long": one row per meal with columns Week, Day, Meal, Item, Appetizer, Entree, Sides, Dessert, HolidayGif
+  //  - "grid": days across the top ("Week 3 Sunday"), dish types down the side
+  function buildMenu(rows) {
+    if (!rows.length) return null;
+    var hdr = rows[0].map(normLabel);
+    var iWeek = hdr.indexOf('week'), iDay = hdr.indexOf('day'), iMeal = hdr.indexOf('meal');
+    var i, j;
+
+    if (iWeek >= 0 && iDay >= 0 && iMeal >= 0) {
+      var weeks = {};
+      for (i = 1; i < rows.length; i++) {
+        var r = rows[i];
+        var w = parseInt(r[iWeek], 10);
+        var key = dayKeyFor(String(r[iDay] || '').replace(/^\s+/, ''));
+        var meal = null, mtext = String(r[iMeal] || '').replace(/^\s+|\s+$/g, '').toLowerCase();
+        for (j = 0; j < MEALS.length; j++) { if (MEALS[j].toLowerCase() === mtext) meal = MEALS[j]; }
+        if (isNaN(w) || !key || !meal) continue;
+        var row = {};
+        for (j = 0; j < hdr.length; j++) { if (hdr[j]) row[hdr[j]] = r[j] || ''; }
+        if (!weeks[w]) weeks[w] = {};
+        if (!weeks[w][key]) weeks[w][key] = {};
+        weeks[w][key][meal] = row;
+      }
+      return { layout: 'long', weeks: weeks };
+    }
+
+    var headerIdx = -1;
+    for (i = 0; i < rows.length && headerIdx < 0; i++) {
+      for (j = 0; j < rows[i].length; j++) {
+        if (WEEK_RE.test(rows[i][j] || '')) { headerIdx = i; break; }
+      }
+    }
+    if (headerIdx < 0) return null;
+
+    var labelRow = {};
+    for (i = headerIdx + 1; i < rows.length; i++) {
+      var name = normLabel(rows[i][0]);
+      if (name && !labelRow.hasOwnProperty(name)) labelRow[name] = rows[i];   // first block of rows wins
+    }
+
+    var menu = {};
+    rows[headerIdx].forEach(function (h, col) {
+      var m = WEEK_RE.exec(h || '');
+      if (!m) return;
+      var key = dayKeyFor(m[2]);
+      if (!key) return;
+      var w = parseInt(m[1], 10);
+      if (!menu[w]) menu[w] = {};
+      var d = {};
+      for (var n in labelRow) {
+        if (labelRow.hasOwnProperty(n)) d[n] = (labelRow[n][col] || '').replace(/^\s+|\s+$/g, '');
+      }
+      menu[w][key] = d;
+    });
+    return { layout: 'grid', weeks: menu };
+  }
+
+  // Splits a cell into separate items: by line break, or (if the cell is one
+  // line like "Crab Cake ❤, Apple Pie") by commas. Ignores stray "0" cells.
+  function splitItems(text) {
+    text = String(text || '');
+    var parts;
+    if (/\r?\n/.test(text)) {
+      parts = text.split(/\r?\n/);
+    } else {
+      PROTECTED_COMMA_ITEMS.forEach(function (p) { text = text.split(p).join(p.replace(/,/g, '\u0001')); });
+      parts = text.split(/\s*,\s+/).map(function (x) { return x.replace(/\u0001/g, ','); });
+    }
+    var out = [];
+    parts.forEach(function (x) {
+      x = x.replace(/^\s+|\s+$/g, '');
+      if (x && x !== '0') out.push(x);
+    });
+    return out;
+  }
+
+  function sectionsForLong(row, meal) {
+    if (!row) return [];
+    var item = splitItems(row.item);
+    if (meal === 'Breakfast') return [['', ALWAYS_BREAKFAST.concat(item)]];
+    return [
+      ['', item],
+      ['Appetizer', splitItems(row.appetizer)],
+      ['Entr\u00e9e', splitItems(row.entree)],
+      ['Sides', splitItems(row.sides)],
+      [DESSERT_HEADING, splitItems(row.dessert)]
+    ];
+  }
+
+  function holidayPictureLong(day) {
+    for (var i = 0; i < MEALS.length; i++) {
+      var r = day[MEALS[i]];
+      var g = r ? String(r.holidaygif || '').replace(/^\s+|\s+$/g, '') : '';
+      if (/\.(gif|png|jpe?g|webp|svg)$/i.test(g)) return g;
+    }
+    return '';
+  }
+
+  // ---------------- TURN A DAY'S DATA INTO CELL CONTENT ----------------
+  // lines(d, ['LunEntree1', 'SpSalad']) -> the non-empty items, in that order
+  function lines(d, names) {
+    var out = [];
+    names.forEach(function (n) {
+      (d[normLabel(n)] || '').split(/\r?\n/).forEach(function (x) {
+        x = x.replace(/^\s+|\s+$/g, '');
+        if (x) out.push(x);
+      });
+    });
+    return out;
+  }
+
+  function dayHasMenu(d) {
+    for (var k in d) {
+      if (d.hasOwnProperty(k) && d[k] && k !== 'holiday' && k !== 'holidaygif' && k !== 'cycleday') return true;
+    }
+    return false;
+  }
+
+  function appetizers(d, prefix) {
+    var own = lines(d, [prefix + 'App']);
+    var soup = lines(d, ['SpSoup']);
+    if (prefix === 'Lun') return own.length ? own : soup.concat([TOSSED_SALAD]);
+    return own.length ? own.concat(soup) : soup.concat([TOSSED_SALAD]);
+  }
+
+  function sectionsFor(d, dayKey, meal) {
+    if (!dayHasMenu(d)) return [];
+    if (meal === 'Breakfast') {
+      return [['', ALWAYS_BREAKFAST.concat(lines(d, ['Oatmeal', 'Egg', 'Bfast1', 'Bfast2']))]];
+    }
+    var p = meal === 'Lunch' ? 'Lun' : 'Din';
+    var sections = [
+      ['Appetizer', appetizers(d, p)],
+      ['Entr\u00e9e', lines(d, [p + 'Entree1', p + 'Entree2', p + 'Entree3', 'SpSalad', 'SpSand'])],
+      ['Sides', lines(d, [p + 'Side1', p + 'Side2', p + 'Side3', 'SpVeg'])]
+    ];
+    var dessertMeal = DESSERT_WITH_LUNCH_DAYS.indexOf(dayKey) >= 0 ? 'Lunch' : 'Dinner';
+    if (meal === dessertMeal) sections.push([DESSERT_HEADING, lines(d, ['Dessert'])]);
+    return sections;
+  }
+
+  // Holiday picture file name: from a "HolidayGif" row, or a "Holiday" row that holds a picture file name
+  function holidayPicture(d) {
+    var g = d['holidaygif'] || '';
+    if (!g && /\.(gif|png|jpe?g|webp|svg)$/i.test(d['holiday'] || '')) g = d['holiday'];
+    return g.replace(/^\s+|\s+$/g, '');
+  }
+
+  // A heart is typed as ♥ or ❤ (or "(h)") after the item name
+  var HEART_RE = /\s*(?:[\u2764\u2665]\uFE0F?|\(h\))/i;
+
+  function renderItem(line) {
+    var div = document.createElement('div');
+    div.className = 'item';
+    var parts = line.split(HEART_RE);
+    for (var i = 0; i < parts.length; i++) {
+      var last = (i === parts.length - 1);
+      div.appendChild(document.createTextNode(last ? parts[i] : parts[i].replace(/\s+$/, '') + '\u00A0'));
+      if (!last) {
+        var heart = document.createElement('span');
+        heart.className = 'heart-symbol';
+        heart.textContent = '\u2665';
+        div.appendChild(heart);
+      }
+    }
+    return div;
+  }
+
+  function fillCell(cell, sections, picture) {
+    function renderSections() {
+      sections.forEach(function (sec, i) {
+        var label = sec[0], items = sec[1];
+        if (items.length === 0) return;
+        var el;
+        if (label) {
+          el = document.createElement('div');
+          el.className = 'section-label';
+          el.textContent = label;
+          cell.appendChild(el);
+        } else if (i > 0 && cell.childNodes.length > 0) {
+          el = document.createElement('div');
+          el.className = 'section-gap';
+          cell.appendChild(el);
+        }
+        items.forEach(function (line) { cell.appendChild(renderItem(line)); });
+      });
+    }
+
+    if (picture) {
+      var img = document.createElement('img');
+      img.className = 'holiday-gif';
+      img.alt = '';
+      img.onerror = function () {          // picture missing: show the normal items instead
+        if (img.parentNode) img.parentNode.removeChild(img);
+        cell.className = cell.className.replace(/\s*holiday-cell/g, '');
+        renderSections();
+      };
+      img.src = picture;
+      cell.className += ' holiday-cell';
+      cell.appendChild(img);
+      return;
+    }
+    renderSections();
+  }
+
+  function clearCells() {
+    var cells = document.querySelectorAll('.meal-cell');
+    for (var i = 0; i < cells.length; i++) {
+      cells[i].innerHTML = '';
+      cells[i].className = cells[i].className.replace(/\s*holiday-cell/g, '');
+    }
+  }
+
+  function renderWeek(weekData, layout) {
+    clearCells();
+    DAYS.forEach(function (day) {
+      var d = weekData[day[0]] || {};
+      MEALS.forEach(function (meal) {
+        var cell = byId('cell-' + day[0] + '-' + meal);
+        if (layout === 'long') {
+          fillCell(cell, sectionsForLong(d[meal], meal), meal === 'Breakfast' ? holidayPictureLong(d) : '');
+        } else {
+          fillCell(cell, sectionsFor(d, day[0], meal), meal === 'Breakfast' ? holidayPicture(d) : '');
+        }
+      });
+    });
+  }
+
+  // ---------------- LOAD THE WORD MENU ----------------
+  // If the file can't be fetched (internet hiccup), the last good copy is used.
+  function applySettings(m) {
+    if (m.week1Starts) CYCLE_ANCHOR = m.week1Starts;
+    if (m.cycleWeeks) CYCLE_LENGTH = m.cycleWeeks;
+  }
+
+  function loadMenu(cb) {
+    MenuFromWord.load(MENU_FILE + '?t=' + new Date().getTime(), function (err, m) {
+      if (!err) {
+        try { localStorage.setItem('menuWord', JSON.stringify(m)); } catch (e) {}
+        applySettings(m);
+        cb(null, m.csv);
+        return;
+      }
+      var cached = null;
+      try { cached = JSON.parse(localStorage.getItem('menuWord')); } catch (e2) {}
+      if (cached && cached.csv) { applySettings(cached); cb(null, cached.csv); }
+      else cb(err);
+    });
+  }
+
+  // ---------------- HIGHLIGHT TODAY ----------------
+  function clearHighlight() {
+    var els = document.querySelectorAll('.is-today');
+    for (var i = 0; i < els.length; i++) els[i].className = els[i].className.replace(/\s*is-today/g, '');
+  }
+
+  function highlightToday() {
+    clearHighlight();
+    var key = DAYS[new Date().getDay()][0];
+    byId('col-' + key).className += ' is-today';
+    MEALS.forEach(function (m) { byId('cell-' + key + '-' + m).className += ' is-today'; });
+  }
+
+  // ---------------- AUTO-FIT TEXT TO SCREEN ----------------
+  function fitToScreen() {
+    var screenEl = byId('screen');
+    var header = byId('header-bar');
+    var table = byId('menu-table');
+    var cs = window.getComputedStyle(screenEl);
+    var available = screenEl.clientHeight
+      - parseFloat(cs.paddingTop) - parseFloat(cs.paddingBottom)
+      - header.offsetHeight - parseFloat(window.getComputedStyle(header).marginBottom) - 6;
+
+    var size = window.innerHeight * MAX_FONT_VH / 100;
+    table.style.height = 'auto';
+    while (size > 10) {
+      table.style.fontSize = size + 'px';
+      if (table.offsetHeight <= available) break;
+      size -= 0.5;
+    }
+    table.style.height = available + 'px';   // stretch to use any leftover space
+  }
+
+  // ---------------- ROTATION ----------------
+  var noteScreen = byId('note-screen');
+  var noteImg = byId('note-img');
+
+  function animateProgressBar(ms) {
+    var bar = byId('progress-bar');
+    bar.style.webkitTransition = 'none';
+    bar.style.transition = 'none';
+    bar.style.width = '100%';
+    void bar.offsetWidth;
+    bar.style.webkitTransition = 'width ' + ms + 'ms linear';
+    bar.style.transition = 'width ' + ms + 'ms linear';
+    bar.style.width = '0%';
+  }
+
+  function showWeek(err, text, week, label, weekOffset, seconds, highlight, done) {
+    showDateRange(weekOffset);
+    noteScreen.style.display = 'none';
+    (function () {
+      try {
+        if (err) throw err;
+        var menu = buildMenu(parseCSV(text));
+        if (!menu) throw new Error('The Word menu could not be read');
+        if (!menu.weeks[week]) throw new Error('Nothing is filled in yet for Week ' + week + ' in the Word menu');
+        renderWeek(menu.weeks[week], menu.layout);
+        setStatus('');
+      } catch (e) {
+        clearCells();
+        setStatus(e.message);
+      }
+      byId('week-display').textContent = 'Week ' + week + ' - ' + label;
+      if (highlight) highlightToday(); else clearHighlight();
+      try { fitToScreen(); } catch (e2) {}
+      animateProgressBar(seconds * 1000);
+      setTimeout(done, seconds * 1000);
+    })();
+  }
+
+  function cycle() {
+    loadMenu(function (err, text) {
+    var current = getCurrentWeek();
+    var next = (current % CYCLE_LENGTH) + 1;
+    showWeek(err, text, current, 'Current Week', 0, MENU_SECONDS, true, function () {
+      showWeek(err, text, next, 'Next Week', 1, NEXT_SECONDS, false, function () {
+        var noteOk = !(noteImg.complete && noteImg.naturalWidth === 0);
+        if (noteOk) noteScreen.style.display = 'block';
+        setTimeout(function () {
+          if (new Date().getTime() - pageStart > RELOAD_AFTER_HOURS * 3600000) {
+            window.location.reload();
+            return;
+          }
+          cycle();
+        }, noteOk ? NOTE_SECONDS * 1000 : 0);
+      });
+    });
+    });
+  }
+
+  window.addEventListener('resize', function () { try { fitToScreen(); } catch (e) {} });
+
+  buildTable();
+  cycle();
+})();
+</script>
+
+</body>
+</html>
